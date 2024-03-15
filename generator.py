@@ -1,8 +1,10 @@
 import random
 
+num_files = input("Quanti casi di test vuoi generare?\n")
+
 def populate_values(vals, n):
     for i in range(n):
-        rand = random.randint(0, 680)
+        rand = random.randint(0, 1200)
         vals.append(0 if rand > 255 else rand)
         vals.append(0)
 
@@ -21,23 +23,24 @@ def elaborate(vals, out_vals, n):
         out_vals.append(cred)
         i = i + 2
 
-in_values = []
-out_values = []
-k = random.randint(1, 400)
-populate_values(in_values, k)
-elaborate(in_values, out_values, k)
-rand_address = random.randint(0, 65565 - 2*k)
-in_values_str = ""
-for v in in_values:
-    in_values_str += str(v) + ", "
-in_values_str = in_values_str[:-2]
-out_values_str = ""
-for v in out_values:
-    out_values_str += str(v) + ", "
-out_values_str = out_values_str[:-2]
+for i in range(int(num_files)):
+    in_values = []
+    out_values = []
+    k = random.randint(1, 400)
+    populate_values(in_values, k)
+    elaborate(in_values, out_values, k)
+    rand_address = random.randint(0, 65565 - 2*k)
+    in_values_str = ""
+    for v in in_values:
+        in_values_str += str(v) + ", "
+    in_values_str = in_values_str[:-2]
+    out_values_str = ""
+    for v in out_values:
+        out_values_str += str(v) + ", "
+    out_values_str = out_values_str[:-2]
 
-with open("output.vhd", "w") as f_out:
-    f_out.write('''library ieee;
+    with open("./output/output" + str(i+1) + ".vhd", "w") as f_out:
+        f_out.write('''library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
