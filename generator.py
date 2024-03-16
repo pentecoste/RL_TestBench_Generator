@@ -23,7 +23,9 @@ def elaborate(vals, out_vals, n):
         out_vals.append(cred)
         i = i + 2
 
+data_struct = []
 for i in range(int(num_files)):
+    temp_arr = []
     in_values = []
     out_values = []
     k = random.randint(1, 400)
@@ -38,9 +40,14 @@ for i in range(int(num_files)):
     for v in out_values:
         out_values_str += str(v) + ", "
     out_values_str = out_values_str[:-2]
+    temp_arr.append(in_values_str)
+    temp_arr.append(out_values_str)
+    temp_arr.append(rand_address)
+    temp_arr.append(k)
+    data_struct.append(temp_arr)
 
-    with open("./output/output" + str(i+1) + ".vhd", "w") as f_out:
-        f_out.write('''library ieee;
+with open("output.vhd", "w") as f_out:
+    f_out.write('''library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use std.textio.all;
@@ -63,15 +70,19 @@ architecture project_tb_arch of project_tb is
     type ram_type is array (65535 downto 0) of std_logic_vector(7 downto 0);
     signal RAM : ram_type := (OTHERS => "00000000");
 
-    constant SCENARIO_LENGTH : integer := ''' + str(k) + ''';
-    type scenario_type is array (0 to SCENARIO_LENGTH*2-1) of integer;
+    ''')
+    for i in range(int(num_files)):
+        f_out.write('''constant SCENARIO_LENGTH''' + str(i) + ''' : integer := ''' + str(data_struct[i][3]) + ''';
+    constant SCENARIO_ADDRESS''' + str(i) + ''' : integer := ''' + str(data_struct[i][2]) + ''';
+    type scenario_type''' + str(i) + ''' is array (0 to SCENARIO_LENGTH''' + str(i) + '''*2-1) of integer;
 
-    signal scenario_input : scenario_type := (''' + in_values_str + ''');
-    signal scenario_full  : scenario_type := (''' + out_values_str + ''');
-
-    signal memory_control : std_logic := '0';
+    signal scenario_input''' + str(i) + ''' : scenario_type''' + str(i) + ''' := (''' + data_struct[i][0] + ''');
+    signal scenario_full''' + str(i) + '''  : scenario_type''' + str(i) + ''' := (''' + data_struct[i][1] + ''');
     
-    constant SCENARIO_ADDRESS : integer := ''' + str(rand_address) + ''';
+    ''')
+
+    f_out.write('''
+    signal memory_control : std_logic := '0';
 
     component project_reti_logiche is
         port (
@@ -162,14 +173,17 @@ begin
         wait for 50 ns;
         
         tb_rst <= '0';
-        memory_control <= '0';  -- Memory controlled by the testbench
+        
+        ''')
+    for i in range(int(num_files)):
+        f_out.write('''memory_control <= '0';  -- Memory controlled by the testbench
         
         wait until falling_edge(tb_clk); -- Skew the testbench transitions with respect to the clock
 
         -- Configure the memory        
-        for i in 0 to SCENARIO_LENGTH*2-1 loop
-            init_o_mem_addr<= std_logic_vector(to_unsigned(SCENARIO_ADDRESS+i, 16));
-            init_o_mem_data<= std_logic_vector(to_unsigned(scenario_input(i),8));
+        for i in 0 to SCENARIO_LENGTH''' + str(i) + '''*2-1 loop
+            init_o_mem_addr<= std_logic_vector(to_unsigned(SCENARIO_ADDRESS''' + str(i) + '''+i, 16));
+            init_o_mem_data<= std_logic_vector(to_unsigned(scenario_input''' + str(i) + '''(i),8));
             init_o_mem_en  <= '1';
             init_o_mem_we  <= '1';
             wait until rising_edge(tb_clk);   
@@ -179,8 +193,8 @@ begin
 
         memory_control <= '1';  -- Memory controlled by the component
         
-        tb_add <= std_logic_vector(to_unsigned(SCENARIO_ADDRESS, 16));
-        tb_k   <= std_logic_vector(to_unsigned(SCENARIO_LENGTH, 10));
+        tb_add <= std_logic_vector(to_unsigned(SCENARIO_ADDRESS''' + str(i) + ''', 16));
+        tb_k   <= std_logic_vector(to_unsigned(SCENARIO_LENGTH''' + str(i) + ''', 10));
         
         tb_start <= '1';
 
@@ -191,8 +205,12 @@ begin
         wait for 5 ns;
         
         tb_start <= '0';
+
+        wait for 50 ns;
         
-        wait;
+        ''')
+        
+    f_out.write('''wait;
         
     end process;
 
@@ -208,7 +226,10 @@ begin
         wait until falling_edge(tb_clk);
         assert tb_done = '0' report "TEST FALLITO o_done !=0 after reset before start" severity failure;
         
-        wait until rising_edge(tb_start);
+        ''')
+
+    for i in range(int(num_files)):
+        f_out.write('''wait until rising_edge(tb_start);
 
         while tb_done /= '1' loop                
             wait until rising_edge(tb_clk);
@@ -216,15 +237,15 @@ begin
 
         assert tb_o_mem_en = '0' or tb_o_mem_we = '0' report "TEST FALLITO o_mem_en !=0 memory should not be written after done." severity failure;
 
-        for i in 0 to SCENARIO_LENGTH*2-1 loop
-            assert RAM(SCENARIO_ADDRESS+i) = std_logic_vector(to_unsigned(scenario_full(i),8)) report "TEST FALLITO @ OFFSET=" & integer'image(i) & " expected= " & integer'image(scenario_full(i)) & " actual=" & integer'image(to_integer(unsigned(RAM(i)))) severity failure;
+        for i in 0 to SCENARIO_LENGTH''' + str(i) + '''*2-1 loop
+            assert RAM(SCENARIO_ADDRESS''' + str(i) + '''+i) = std_logic_vector(to_unsigned(scenario_full''' + str(i) + '''(i),8)) report "TEST FALLITO @ OFFSET=" & integer'image(i) & " expected= " & integer'image(scenario_full''' + str(i) + '''(i)) & " actual=" & integer'image(to_integer(unsigned(RAM(i)))) severity failure;
         end loop;
 
-        wait until falling_edge(tb_start);
-        assert tb_done = '1' report "TEST FALLITO o_done !=0 after reset before start" severity failure;
         wait until falling_edge(tb_done);
+        
+        ''')
 
-        assert false report "Simulation Ended! TEST PASSATO" severity failure;
+    f_out.write('''assert false report "Simulation Ended! TEST PASSATO" severity failure;
     end process;
 
 end architecture;''')
