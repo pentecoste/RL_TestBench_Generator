@@ -177,8 +177,17 @@ begin
         ''')
     for i in range(int(num_files)):
         f_out.write('''memory_control <= '0';  -- Memory controlled by the testbench
-        
-        wait until falling_edge(tb_clk); -- Skew the testbench transitions with respect to the clock
+        ''')
+        if (random.randint(1, 50) <= 5):
+            f_out.write('''tb_rst <= '1';
+
+            wait for 50 ns;
+
+            tb_rst <= '0';
+
+            ''')
+
+        f_out.write('''wait until falling_edge(tb_clk); -- Skew the testbench transitions with respect to the clock
 
         -- Configure the memory        
         for i in 0 to SCENARIO_LENGTH''' + str(i) + '''*2-1 loop
@@ -209,7 +218,7 @@ begin
         wait for 50 ns;
         
         ''')
-        
+
     f_out.write('''wait;
         
     end process;
