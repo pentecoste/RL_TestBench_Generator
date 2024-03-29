@@ -28,7 +28,7 @@ for i in range(int(num_files)):
     temp_arr = []
     in_values = []
     out_values = []
-    k = random.randint(1, 400)
+    k = random.randint(0, 1023)
     populate_values(in_values, k)
     elaborate(in_values, out_values, k)
     rand_address = random.randint(0, 65535 - 2*k)
