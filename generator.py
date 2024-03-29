@@ -72,13 +72,18 @@ architecture project_tb_arch of project_tb is
 
     ''')
     for i in range(int(num_files)):
-        f_out.write('''constant SCENARIO_LENGTH''' + str(i) + ''' : integer := ''' + str(data_struct[i][3]) + ''';
+        if (data_struct[i][3] != 0):
+            f_out.write('''constant SCENARIO_LENGTH''' + str(i) + ''' : integer := ''' + str(data_struct[i][3]) + ''';
     constant SCENARIO_ADDRESS''' + str(i) + ''' : integer := ''' + str(data_struct[i][2]) + ''';
     type scenario_type''' + str(i) + ''' is array (0 to SCENARIO_LENGTH''' + str(i) + '''*2-1) of integer;
 
     signal scenario_input''' + str(i) + ''' : scenario_type''' + str(i) + ''' := (''' + data_struct[i][0] + ''');
     signal scenario_full''' + str(i) + '''  : scenario_type''' + str(i) + ''' := (''' + data_struct[i][1] + ''');
     
+    ''')
+        else:
+            f_out.write('''constant SCENARIO_LENGTH''' + str(i) + ''' : integer := ''' + str(data_struct[i][3]) + ''';
+    constant SCENARIO_ADDRESS''' + str(i) + ''' : integer := ''' + str(data_struct[i][2]) + ''';
     ''')
 
     f_out.write('''
@@ -187,7 +192,8 @@ begin
 
         ''')
 
-        f_out.write('''wait until falling_edge(tb_clk); -- Skew the testbench transitions with respect to the clock
+        if (data_struct[i][3] != 0):
+            f_out.write('''wait until falling_edge(tb_clk); -- Skew the testbench transitions with respect to the clock
 
         -- Configure the memory        
         for i in 0 to SCENARIO_LENGTH''' + str(i) + '''*2-1 loop
@@ -200,6 +206,27 @@ begin
         
         wait until falling_edge(tb_clk);
 
+        memory_control <= '1';  -- Memory controlled by the component
+        
+        tb_add <= std_logic_vector(to_unsigned(SCENARIO_ADDRESS''' + str(i) + ''', 16));
+        tb_k   <= std_logic_vector(to_unsigned(SCENARIO_LENGTH''' + str(i) + ''', 10));
+        
+        tb_start <= '1';
+
+        while tb_done /= '1' loop                
+            wait until rising_edge(tb_clk);
+        end loop;
+
+        wait for 5 ns;
+        
+        tb_start <= '0';
+
+        wait for 50 ns;
+        
+        ''')
+        else:
+            f_out.write('''wait until falling_edge(tb_clk); -- Skew the testbench transitions with respect to the clock
+       
         memory_control <= '1';  -- Memory controlled by the component
         
         tb_add <= std_logic_vector(to_unsigned(SCENARIO_ADDRESS''' + str(i) + ''', 16));
@@ -238,7 +265,8 @@ begin
         ''')
 
     for i in range(int(num_files)):
-        f_out.write('''wait until rising_edge(tb_start);
+        if (data_struct[i][3] != 0):
+            f_out.write('''wait until rising_edge(tb_start);
 
         while tb_done /= '1' loop                
             wait until rising_edge(tb_clk);
@@ -253,6 +281,19 @@ begin
         wait until falling_edge(tb_done);
         
         ''')
+        else:
+            f_out.write('''wait until rising_edge(tb_start);
+
+        while tb_done /= '1' loop                
+            wait until rising_edge(tb_clk);
+        end loop;
+
+        assert tb_o_mem_en = '0' or tb_o_mem_we = '0' report "TEST FALLITO o_mem_en !=0 memory should not be written after done." severity failure;
+
+        wait until falling_edge(tb_done);
+        
+        ''')
+
 
     f_out.write('''assert false report "Simulation Ended! TEST PASSATO" severity failure;
     end process;
