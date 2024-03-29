@@ -31,7 +31,7 @@ for i in range(int(num_files)):
     k = random.randint(1, 400)
     populate_values(in_values, k)
     elaborate(in_values, out_values, k)
-    rand_address = random.randint(0, 65565 - 2*k)
+    rand_address = random.randint(0, 65535 - 2*k)
     in_values_str = ""
     for v in in_values:
         in_values_str += str(v) + ", "
@@ -181,11 +181,11 @@ begin
         if (random.randint(1, 50) <= 5):
             f_out.write('''tb_rst <= '1';
 
-            wait for 50 ns;
+        wait for 50 ns;
 
-            tb_rst <= '0';
+        tb_rst <= '0';
 
-            ''')
+        ''')
 
         f_out.write('''wait until falling_edge(tb_clk); -- Skew the testbench transitions with respect to the clock
 
